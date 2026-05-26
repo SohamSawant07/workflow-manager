@@ -8,8 +8,6 @@ import type {
   WorkflowNode,
   WorkflowTask,
 } from "@/types/workflow";
-import { reconcileWorkflow } from "./pipeline";
-
 const EMPTY = "";
 
 export function storageTaskForFirestore(task: WorkflowTask): Record<string, unknown> {
@@ -51,9 +49,7 @@ function storageNodeBase(node: WorkflowNode) {
 export function prepareWorkflowForFirestore(
   workflow: WorkflowNode[]
 ): Record<string, unknown>[] {
-  const reconciled = reconcileWorkflow(workflow);
-
-  return reconciled.map((node) => {
+  return workflow.map((node) => {
     const base = storageNodeBase(node);
 
     switch (node.type) {

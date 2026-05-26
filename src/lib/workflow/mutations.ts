@@ -185,6 +185,7 @@ export function addCustomStep(
     key: crypto.randomUUID(),
     title: title.trim() || "Custom Step",
     type: "custom_note",
+    description: "",
     order: 0,
     completed: false,
     notes: notes?.trim() ?? "",
@@ -192,6 +193,7 @@ export function addCustomStep(
     blockedReason: "",
     completedAt: null,
     manuallyUnlocked: false,
+    amount: null,
   };
 
   sorted.splice(insertAfterIndex + 1, 0, newNode);

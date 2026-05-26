@@ -162,10 +162,9 @@ export function buildFirestoreUpdateDocument(
     result.status = normalizeProjectStatus(updates.status);
   }
   if (updates.workflow !== undefined) {
-    const workflow = normalizeWorkflow(updates.workflow);
-    result.workflow = prepareWorkflowForFirestore(workflow);
+    result.workflow = prepareWorkflowForFirestore(updates.workflow);
     if (updates.progress === undefined) {
-      result.progress = calculateWorkflowProgress(workflow);
+      result.progress = calculateWorkflowProgress(updates.workflow);
     }
   }
   if (updates.progress !== undefined) {
