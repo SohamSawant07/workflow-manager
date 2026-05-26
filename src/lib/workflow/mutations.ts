@@ -1,4 +1,5 @@
 import type {
+  CustomNoteWorkflowNode,
   MultiSelectCategoryWorkflowNode,
   WorkflowNode,
   WorkflowNodePatch,
@@ -14,8 +15,33 @@ function updateNodeInWorkflow(
   return workflow.map((node) => (node.id === nodeId ? updater(node) : node));
 }
 
-function finalizeWorkflow(workflow: WorkflowNode[]): WorkflowNode[] {
-  return reconcileWorkflow(workflow);
+/** Track completedAt timestamps by comparing before/after reconciliation */
+function applyCompletedAt(
+  before: WorkflowNode[],
+  after: WorkflowNode[]
+): WorkflowNode[] {
+  const now = new Date().toISOString();
+  const beforeMap = new Map(before.map((n) => [n.id, n]));
+  return after.map((node) => {
+    const prev = beforeMap.get(node.id);
+    if (!prev) return { ...node, completedAt: node.completedAt ?? null };
+    if (!prev.completed && node.completed) return { ...node, completedAt: now };
+    if (prev.completed && !node.completed) return { ...node, completedAt: null };
+    return { ...node, completedAt: prev.completedAt ?? node.completedAt ?? null };
+  });
+}
+
+function finalizeWorkflow(
+  originalWorkflow: WorkflowNode[],
+  updatedWorkflow: WorkflowNode[]
+): WorkflowNode[] {
+  const reconciled = reconcileWorkflow(updatedWorkflow);
+  return applyCompletedAt(originalWorkflow, reconciled);
+}
+
+/** Normalize order values to 0, 1, 2, … after sort */
+function normalizeOrders(sorted: WorkflowNode[]): WorkflowNode[] {
+  return sorted.map((n, i) => ({ ...n, order: i }));
 }
 
 export function patchWorkflowNode(
@@ -65,9 +91,14 @@ export function patchWorkflowNode(
         ...(patch.tasks !== undefined ? { tasks: patch.tasks } : {}),
       };
     }
+    if (node.type === "custom_note") {
+      const completed =
+        patch.completed !== undefined ? patch.completed : node.completed;
+      return { ...node, ...basePatch, completed };
+    }
     return node;
   });
-  return finalizeWorkflow(updated);
+  return finalizeWorkflow(workflow, updated);
 }
 
 export function toggleWorkflowTask(
@@ -93,7 +124,7 @@ export function toggleWorkflowTask(
     }
     return node;
   });
-  return finalizeWorkflow(updated);
+  return finalizeWorkflow(workflow, updated);
 }
 
 export function toggleWorkflowStep(
@@ -111,9 +142,12 @@ export function toggleWorkflowStep(
       if (next && !node.value.trim()) return node;
       return { ...node, completed: next };
     }
+    if (node.type === "custom_note") {
+      return { ...node, completed: !node.completed };
+    }
     return node;
   });
-  return finalizeWorkflow(updated);
+  return finalizeWorkflow(workflow, updated);
 }
 
 export function toggleLightCategory(
@@ -134,5 +168,84 @@ export function toggleLightCategory(
       selectedCategoryIds: Array.from(selected),
     };
   });
-  return finalizeWorkflow(updated);
+  return finalizeWorkflow(workflow, updated);
+}
+
+/** Add a custom note step at the given insertion position (after index, -1 = prepend) */
+export function addCustomStep(
+  workflow: WorkflowNode[],
+  insertAfterIndex: number,
+  title: string,
+  notes?: string
+): WorkflowNode[] {
+  const sorted = [...workflow].sort((a, b) => a.order - b.order);
+
+  const newNode: CustomNoteWorkflowNode = {
+    id: crypto.randomUUID(),
+    key: crypto.randomUUID(),
+    title: title.trim() || "Custom Step",
+    type: "custom_note",
+    order: 0,
+    completed: false,
+    notes: notes?.trim() ?? "",
+    locked: false,
+    blockedReason: "",
+    completedAt: null,
+    manuallyUnlocked: false,
+  };
+
+  sorted.splice(insertAfterIndex + 1, 0, newNode);
+  const reordered = normalizeOrders(sorted);
+  return finalizeWorkflow(workflow, reordered);
+}
+
+/** Remove a node by ID and re-normalize order values */
+export function deleteWorkflowNode(
+  workflow: WorkflowNode[],
+  nodeId: string
+): WorkflowNode[] {
+  const filtered = workflow.filter((n) => n.id !== nodeId);
+  const sorted = [...filtered].sort((a, b) => a.order - b.order);
+  const reordered = normalizeOrders(sorted);
+  return finalizeWorkflow(workflow, reordered);
+}
+
+/** Swap a node up or down in sorted order */
+export function reorderWorkflowNodes(
+  workflow: WorkflowNode[],
+  nodeId: string,
+  direction: "up" | "down"
+): WorkflowNode[] {
+  const sorted = [...workflow].sort((a, b) => a.order - b.order);
+  const index = sorted.findIndex((n) => n.id === nodeId);
+  if (index === -1) return workflow;
+
+  const swapIndex = direction === "up" ? index - 1 : index + 1;
+  if (swapIndex < 0 || swapIndex >= sorted.length) return workflow;
+
+  [sorted[index], sorted[swapIndex]] = [sorted[swapIndex], sorted[index]];
+  const reordered = normalizeOrders(sorted);
+  return finalizeWorkflow(workflow, reordered);
+}
+
+/** Manually unlock a locked step so it can be edited out-of-order */
+export function unlockWorkflowNode(
+  workflow: WorkflowNode[],
+  nodeId: string
+): WorkflowNode[] {
+  const updated = workflow.map((n) =>
+    n.id === nodeId ? { ...n, manuallyUnlocked: true } : n
+  );
+  return finalizeWorkflow(workflow, updated);
+}
+
+/** Re-lock a manually unlocked step, restoring sequential behavior */
+export function relockWorkflowNode(
+  workflow: WorkflowNode[],
+  nodeId: string
+): WorkflowNode[] {
+  const updated = workflow.map((n) =>
+    n.id === nodeId ? { ...n, manuallyUnlocked: false } : n
+  );
+  return finalizeWorkflow(workflow, updated);
 }

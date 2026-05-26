@@ -33,6 +33,8 @@ export function isNodeCompleted(node: WorkflowNode): boolean {
       if (selected.length === 0) return false;
       return selected.every(isCategoryCompleted);
     }
+    case "custom_note":
+      return node.completed === true;
     default:
       return false;
   }
@@ -47,9 +49,10 @@ function countNodeUnits(node: WorkflowNode): { total: number; completed: number 
     }
     case "numeric_input":
     case "text_input":
+    case "custom_note":
       return { total: 1, completed: isNodeCompleted(node) ? 1 : 0 };
     case "multi_select_category": {
-      const selected = node.availableCategories.filter((c) =>
+      const selected = (node as MultiSelectCategoryWorkflowNode).availableCategories.filter((c) =>
         node.selectedCategoryIds.includes(c.id)
       );
       return selected.reduce(

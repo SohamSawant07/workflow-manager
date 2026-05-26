@@ -1,5 +1,6 @@
 import type {
   ChecklistWorkflowNode,
+  CustomNoteWorkflowNode,
   MultiSelectCategoryWorkflowNode,
   NumericInputWorkflowNode,
   TextInputWorkflowNode,
@@ -40,6 +41,10 @@ function storageNodeBase(node: WorkflowNode) {
     description: node.description ?? EMPTY,
     locked: node.locked ?? false,
     blockedReason: node.blockedReason ?? EMPTY,
+    completedAt: node.completedAt ?? null,
+    manuallyUnlocked: node.manuallyUnlocked ?? false,
+    notes: node.notes ?? EMPTY,
+    amount: node.amount ?? null,
   };
 }
 
@@ -81,6 +86,8 @@ export function prepareWorkflowForFirestore(
           selectedCategoryIds: multi.selectedCategoryIds ?? [],
         };
       }
+      case "custom_note":
+        return { ...base, type: "custom_note" };
       default:
         return base;
     }

@@ -1,5 +1,6 @@
 import type {
   ChecklistWorkflowNode,
+  CustomNoteWorkflowNode,
   MultiSelectCategoryWorkflowNode,
   NumericInputWorkflowNode,
   TextInputWorkflowNode,
@@ -28,18 +29,21 @@ export function getPipelineNodeIndex(
   return sorted.findIndex((n) => n.id === nodeId);
 }
 
-/** True when any earlier pipeline step is incomplete */
+/** True when any earlier pipeline step is incomplete AND this step is not manually unlocked */
 export function isPipelineStepLocked(
   workflow: WorkflowNode[],
   nodeId: string
 ): boolean {
+  const node = workflow.find((n) => n.id === nodeId);
+  if (node?.manuallyUnlocked) return false;
+
   const sorted = getSortedPipeline(workflow);
   const index = sorted.findIndex((n) => n.id === nodeId);
   if (index <= 0) return false;
 
   return sorted
     .slice(0, index)
-    .some((node) => !isNodeCompleted(node));
+    .some((n) => !isNodeCompleted(n));
 }
 
 export function getPipelineBlockReason(
@@ -50,7 +54,9 @@ export function getPipelineBlockReason(
 
   const sorted = getSortedPipeline(workflow);
   const index = sorted.findIndex((n) => n.id === nodeId);
-  const blocker = sorted.slice(0, index).find((n) => !isNodeCompleted(n));
+  const blocker = sorted
+    .slice(0, index)
+    .find((n) => !isNodeCompleted(n));
 
   return blocker
     ? `Complete "${blocker.title}" first`
@@ -101,6 +107,8 @@ function deriveNodeCompleted(node: WorkflowNode): WorkflowNode {
           selected.length > 0 && selected.every((c) => c.completed),
       };
     }
+    case "custom_note":
+      return { ...node, completed: node.completed === true };
     default:
       return node;
   }
@@ -112,28 +120,32 @@ function resetNode(node: WorkflowNode): WorkflowNode {
       return {
         ...node,
         completed: false,
+        completedAt: null,
         tasks: node.tasks.map((t) => ({ ...t, completed: false })),
       };
     case "numeric_input":
-      return { ...node, completed: false };
+      return { ...node, completed: false, completedAt: null };
     case "text_input":
-      return { ...node, completed: false };
+      return { ...node, completed: false, completedAt: null };
     case "multi_select_category":
       return {
         ...node,
         completed: false,
+        completedAt: null,
         availableCategories: node.availableCategories.map((c) => ({
           ...c,
           completed: false,
           tasks: c.tasks.map((t) => ({ ...t, completed: false })),
         })),
       };
+    case "custom_note":
+      return { ...node, completed: false, completedAt: null };
     default:
       return node;
   }
 }
 
-/** Reset every pipeline step after the first incomplete one */
+/** Reset every pipeline step after the first incomplete one, skipping manually unlocked nodes */
 function cascadeResetDownstreamPipeline(
   workflow: WorkflowNode[]
 ): WorkflowNode[] {
@@ -152,7 +164,7 @@ function cascadeResetDownstreamPipeline(
       continue;
     }
 
-    if (foundIncomplete) {
+    if (foundIncomplete && !derived.manuallyUnlocked) {
       idToNode.set(node.id, resetNode(derived));
     }
   }

@@ -1,5 +1,6 @@
 import type {
   ChecklistWorkflowNode,
+  CustomNoteWorkflowNode,
   MultiSelectCategoryWorkflowNode,
   NumericInputWorkflowNode,
   TextInputWorkflowNode,
@@ -57,6 +58,12 @@ function normalizeCategory(cat: Partial<WorkflowCategory>): WorkflowCategory {
   };
 }
 
+function toAmountOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const num = Number(value);
+  return Number.isFinite(num) && num > 0 ? num : null;
+}
+
 function nodeBaseDefaults(
   raw: Partial<WorkflowNode> & { status?: unknown },
   def?: (typeof WORKFLOW_NODE_DEFINITIONS)[number]
@@ -70,6 +77,10 @@ function nodeBaseDefaults(
     description: raw.description ?? def?.description ?? EMPTY,
     locked: raw.locked ?? false,
     blockedReason: raw.blockedReason ?? EMPTY,
+    completedAt: (raw as { completedAt?: unknown }).completedAt as string | null ?? null,
+    manuallyUnlocked: (raw as { manuallyUnlocked?: unknown }).manuallyUnlocked === true,
+    notes: String((raw as { notes?: unknown }).notes ?? EMPTY),
+    amount: toAmountOrNull((raw as { amount?: unknown }).amount),
   };
 }
 
@@ -144,6 +155,16 @@ function normalizeMultiSelectNode(
   };
 }
 
+function normalizeCustomNoteNode(
+  raw: Partial<CustomNoteWorkflowNode> & { status?: unknown },
+  def?: (typeof WORKFLOW_NODE_DEFINITIONS)[number]
+): CustomNoteWorkflowNode {
+  return {
+    ...nodeBaseDefaults(raw, def),
+    type: "custom_note",
+  };
+}
+
 function normalizeNode(
   raw: Partial<WorkflowNode> & { status?: unknown }
 ): WorkflowNode {
@@ -165,6 +186,11 @@ function normalizeNode(
     case "multi_select_category":
       return normalizeMultiSelectNode(
         raw as Partial<MultiSelectCategoryWorkflowNode>,
+        def
+      );
+    case "custom_note":
+      return normalizeCustomNoteNode(
+        raw as Partial<CustomNoteWorkflowNode>,
         def
       );
     case "checklist":

@@ -2,7 +2,8 @@ export type WorkflowNodeType =
   | "checklist"
   | "numeric_input"
   | "text_input"
-  | "multi_select_category";
+  | "multi_select_category"
+  | "custom_note";
 
 export interface WorkflowTask {
   id: string;
@@ -31,6 +32,14 @@ export interface WorkflowNodeBase {
   /** Computed: locked by global pipeline order */
   locked?: boolean;
   blockedReason?: string;
+  /** ISO timestamp when this step was last completed */
+  completedAt?: string | null;
+  /** Manually unlocked by user to allow out-of-order editing */
+  manuallyUnlocked?: boolean;
+  /** Optional notes visible on any step */
+  notes?: string;
+  /** Amount field — used by advance_received step */
+  amount?: number | null;
 }
 
 export interface ChecklistWorkflowNode extends WorkflowNodeBase {
@@ -54,11 +63,16 @@ export interface MultiSelectCategoryWorkflowNode extends WorkflowNodeBase {
   selectedCategoryIds: string[];
 }
 
+export interface CustomNoteWorkflowNode extends WorkflowNodeBase {
+  type: "custom_note";
+}
+
 export type WorkflowNode =
   | ChecklistWorkflowNode
   | NumericInputWorkflowNode
   | TextInputWorkflowNode
-  | MultiSelectCategoryWorkflowNode;
+  | MultiSelectCategoryWorkflowNode
+  | CustomNoteWorkflowNode;
 
 export type WorkflowNodePatch = Partial<
   Omit<WorkflowNodeBase, "id" | "key" | "type" | "order" | "completed">

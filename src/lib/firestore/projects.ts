@@ -31,6 +31,11 @@ import {
   toggleLightCategory,
   toggleWorkflowTask as applyWorkflowTaskToggle,
   toggleWorkflowStep as applyWorkflowStepToggle,
+  addCustomStep,
+  deleteWorkflowNode as applyDeleteWorkflowNode,
+  reorderWorkflowNodes,
+  unlockWorkflowNode as applyUnlockWorkflowNode,
+  relockWorkflowNode as applyRelockWorkflowNode,
 } from "@/lib/workflow/mutations";
 import { reconcileWorkflow } from "@/lib/workflow/pipeline";
 import { calculateWorkflowProgress } from "@/lib/workflow/progress";
@@ -185,6 +190,59 @@ export async function toggleWorkflowLightCategory(
   projectStatus: Project["status"]
 ): Promise<void> {
   const updated = toggleLightCategory(workflow, nodeId, categoryId);
+  await saveWorkflow(projectId, updated, projectStatus);
+}
+
+export async function addCustomWorkflowStep(
+  projectId: string,
+  workflow: WorkflowNode[],
+  insertAfterIndex: number,
+  title: string,
+  notes: string,
+  projectStatus: Project["status"]
+): Promise<void> {
+  const updated = addCustomStep(workflow, insertAfterIndex, title, notes);
+  await saveWorkflow(projectId, updated, projectStatus);
+}
+
+export async function deleteWorkflowStep(
+  projectId: string,
+  workflow: WorkflowNode[],
+  nodeId: string,
+  projectStatus: Project["status"]
+): Promise<void> {
+  const updated = applyDeleteWorkflowNode(workflow, nodeId);
+  await saveWorkflow(projectId, updated, projectStatus);
+}
+
+export async function reorderWorkflowStep(
+  projectId: string,
+  workflow: WorkflowNode[],
+  nodeId: string,
+  direction: "up" | "down",
+  projectStatus: Project["status"]
+): Promise<void> {
+  const updated = reorderWorkflowNodes(workflow, nodeId, direction);
+  await saveWorkflow(projectId, updated, projectStatus);
+}
+
+export async function unlockWorkflowStep(
+  projectId: string,
+  workflow: WorkflowNode[],
+  nodeId: string,
+  projectStatus: Project["status"]
+): Promise<void> {
+  const updated = applyUnlockWorkflowNode(workflow, nodeId);
+  await saveWorkflow(projectId, updated, projectStatus);
+}
+
+export async function relockWorkflowStep(
+  projectId: string,
+  workflow: WorkflowNode[],
+  nodeId: string,
+  projectStatus: Project["status"]
+): Promise<void> {
+  const updated = applyRelockWorkflowNode(workflow, nodeId);
   await saveWorkflow(projectId, updated, projectStatus);
 }
 
