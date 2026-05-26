@@ -70,6 +70,10 @@ function nodeBaseDefaults(
     description: raw.description ?? def?.description ?? EMPTY,
     locked: raw.locked ?? false,
     blockedReason: raw.blockedReason ?? EMPTY,
+    custom: raw.custom ?? false,
+    completedAt: raw.completedAt ?? undefined,
+    notes: String(raw.notes ?? EMPTY).trim(),
+    amount: raw.amount !== undefined && raw.amount !== null ? Number(raw.amount) : null,
   };
 }
 

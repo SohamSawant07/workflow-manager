@@ -5,6 +5,7 @@ import type {
 } from "@/types/workflow";
 import { reconcileWorkflow } from "./pipeline";
 import { toggleSubtask } from "./sequential";
+import { createLightCategories } from "./definitions";
 
 function updateNodeInWorkflow(
   workflow: WorkflowNode[],
@@ -134,5 +135,108 @@ export function toggleLightCategory(
       selectedCategoryIds: Array.from(selected),
     };
   });
+  return finalizeWorkflow(updated);
+}
+
+export function addCustomStep(
+  workflow: WorkflowNode[],
+  insertAfterNodeId: string | null,
+  step: {
+    title: string;
+    type: WorkflowNode["type"];
+    description?: string;
+    taskTitles?: string[];
+  }
+): WorkflowNode[] {
+  const id = crypto.randomUUID();
+  const key = `custom_${id}`;
+  const baseNode = {
+    id,
+    key,
+    title: step.title,
+    type: step.type,
+    order: 0,
+    description: step.description ?? "",
+    completed: false,
+    locked: false,
+    blockedReason: "",
+    custom: true,
+    completedAt: undefined,
+    notes: "",
+    amount: null,
+  };
+
+  let newNode: WorkflowNode;
+
+  if (step.type === "checklist") {
+    newNode = {
+      ...baseNode,
+      type: "checklist",
+      tasks: (step.taskTitles ?? []).map((title, index) => ({
+        id: crypto.randomUUID(),
+        title,
+        completed: false,
+        order: index,
+      })),
+    };
+  } else if (step.type === "numeric_input") {
+    newNode = {
+      ...baseNode,
+      type: "numeric_input",
+      value: null,
+    };
+  } else if (step.type === "text_input") {
+    newNode = {
+      ...baseNode,
+      type: "text_input",
+      value: "",
+    };
+  } else if (step.type === "multi_select_category") {
+    newNode = {
+      ...baseNode,
+      type: "multi_select_category",
+      availableCategories: createLightCategories(),
+      selectedCategoryIds: [],
+    };
+  } else {
+    newNode = {
+      ...baseNode,
+      type: "checklist",
+      tasks: [],
+    };
+  }
+
+  const sorted = [...workflow].sort((a, b) => a.order - b.order);
+  
+  let insertIndex = 0;
+  if (insertAfterNodeId !== null) {
+    const idx = sorted.findIndex((n) => n.id === insertAfterNodeId);
+    if (idx !== -1) {
+      insertIndex = idx + 1;
+    }
+  }
+
+  sorted.splice(insertIndex, 0, newNode);
+
+  const updated = sorted.map((node, index) => ({
+    ...node,
+    order: index,
+  }));
+
+  return finalizeWorkflow(updated);
+}
+
+export function deleteCustomStep(
+  workflow: WorkflowNode[],
+  nodeId: string
+): WorkflowNode[] {
+  const filtered = workflow.filter((n) => n.id !== nodeId);
+  const sorted = filtered.sort((a, b) => a.order - b.order);
+
+  const updated = sorted.map((node, index) => ({
+    ...node,
+    order: index,
+  }));
+
   return finalizeWorkflow(updated);
 }

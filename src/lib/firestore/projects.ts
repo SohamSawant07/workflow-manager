@@ -31,6 +31,8 @@ import {
   toggleLightCategory,
   toggleWorkflowTask as applyWorkflowTaskToggle,
   toggleWorkflowStep as applyWorkflowStepToggle,
+  addCustomStep,
+  deleteCustomStep,
 } from "@/lib/workflow/mutations";
 import { reconcileWorkflow } from "@/lib/workflow/pipeline";
 import { calculateWorkflowProgress } from "@/lib/workflow/progress";
@@ -185,6 +187,32 @@ export async function toggleWorkflowLightCategory(
   projectStatus: Project["status"]
 ): Promise<void> {
   const updated = toggleLightCategory(workflow, nodeId, categoryId);
+  await saveWorkflow(projectId, updated, projectStatus);
+}
+
+export async function addWorkflowCustomStep(
+  projectId: string,
+  workflow: WorkflowNode[],
+  insertAfterNodeId: string | null,
+  step: {
+    title: string;
+    type: WorkflowNode["type"];
+    description?: string;
+    taskTitles?: string[];
+  },
+  projectStatus: Project["status"]
+): Promise<void> {
+  const updated = addCustomStep(workflow, insertAfterNodeId, step);
+  await saveWorkflow(projectId, updated, projectStatus);
+}
+
+export async function deleteWorkflowCustomStep(
+  projectId: string,
+  workflow: WorkflowNode[],
+  nodeId: string,
+  projectStatus: Project["status"]
+): Promise<void> {
+  const updated = deleteCustomStep(workflow, nodeId);
   await saveWorkflow(projectId, updated, projectStatus);
 }
 

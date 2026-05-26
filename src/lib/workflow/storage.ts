@@ -40,6 +40,10 @@ function storageNodeBase(node: WorkflowNode) {
     description: node.description ?? EMPTY,
     locked: node.locked ?? false,
     blockedReason: node.blockedReason ?? EMPTY,
+    custom: node.custom ?? false,
+    completedAt: node.completedAt ?? null,
+    notes: node.notes ?? EMPTY,
+    amount: node.amount ?? null,
   };
 }
 

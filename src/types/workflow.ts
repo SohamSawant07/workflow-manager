@@ -31,6 +31,10 @@ export interface WorkflowNodeBase {
   /** Computed: locked by global pipeline order */
   locked?: boolean;
   blockedReason?: string;
+  custom?: boolean;
+  completedAt?: string;
+  notes?: string;
+  amount?: number | null;
 }
 
 export interface ChecklistWorkflowNode extends WorkflowNodeBase {
@@ -67,6 +71,8 @@ export type WorkflowNodePatch = Partial<
   value?: string | number | null;
   selectedCategoryIds?: string[];
   tasks?: WorkflowTask[];
+  amount?: number | null;
+  notes?: string;
 };
 
 export type WorkflowTaskPatch = Partial<Pick<WorkflowTask, "completed">>;

@@ -65,28 +65,37 @@ function deriveCategoryCompleted(category: WorkflowCategory): WorkflowCategory {
 }
 
 function deriveNodeCompleted(node: WorkflowNode): WorkflowNode {
+  let completed = false;
+  let updatedNode = { ...node };
+
   switch (node.type) {
     case "checklist": {
       const tasks = sortTasks(node.tasks);
-      return {
+      completed = tasks.length > 0 && tasks.every(isTaskCompleted);
+      updatedNode = {
         ...node,
         tasks,
-        completed: tasks.length > 0 && tasks.every(isTaskCompleted),
+        completed,
       };
+      break;
     }
     case "numeric_input":
-      return {
+      completed =
+        node.completed &&
+        node.value !== null &&
+        node.value > 0;
+      updatedNode = {
         ...node,
-        completed:
-          node.completed &&
-          node.value !== null &&
-          node.value > 0,
+        completed,
       };
+      break;
     case "text_input":
-      return {
+      completed = node.completed && node.value.trim().length > 0;
+      updatedNode = {
         ...node,
-        completed: node.completed && node.value.trim().length > 0,
+        completed,
       };
+      break;
     case "multi_select_category": {
       const availableCategories = node.availableCategories.map(
         deriveCategoryCompleted
@@ -94,16 +103,28 @@ function deriveNodeCompleted(node: WorkflowNode): WorkflowNode {
       const selected = availableCategories.filter((c) =>
         node.selectedCategoryIds.includes(c.id)
       );
-      return {
+      completed = selected.length > 0 && selected.every((c) => c.completed);
+      updatedNode = {
         ...node,
         availableCategories,
-        completed:
-          selected.length > 0 && selected.every((c) => c.completed),
+        completed,
       };
+      break;
     }
     default:
-      return node;
+      break;
   }
+
+  // Handle completedAt timestamp
+  if (completed) {
+    if (!node.completedAt) {
+      updatedNode.completedAt = new Date().toISOString();
+    }
+  } else {
+    updatedNode.completedAt = undefined;
+  }
+
+  return updatedNode;
 }
 
 function resetNode(node: WorkflowNode): WorkflowNode {
@@ -112,16 +133,18 @@ function resetNode(node: WorkflowNode): WorkflowNode {
       return {
         ...node,
         completed: false,
+        completedAt: undefined,
         tasks: node.tasks.map((t) => ({ ...t, completed: false })),
       };
     case "numeric_input":
-      return { ...node, completed: false };
+      return { ...node, completed: false, completedAt: undefined };
     case "text_input":
-      return { ...node, completed: false };
+      return { ...node, completed: false, completedAt: undefined };
     case "multi_select_category":
       return {
         ...node,
         completed: false,
+        completedAt: undefined,
         availableCategories: node.availableCategories.map((c) => ({
           ...c,
           completed: false,
