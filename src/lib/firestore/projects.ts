@@ -33,6 +33,7 @@ import {
   toggleWorkflowStep as applyWorkflowStepToggle,
   addCustomStep,
   deleteCustomStep,
+  reorderWorkflow,
 } from "@/lib/workflow/mutations";
 import { reconcileWorkflow } from "@/lib/workflow/pipeline";
 import { calculateWorkflowProgress } from "@/lib/workflow/progress";
@@ -213,6 +214,17 @@ export async function deleteWorkflowCustomStep(
   projectStatus: Project["status"]
 ): Promise<void> {
   const updated = deleteCustomStep(workflow, nodeId);
+  await saveWorkflow(projectId, updated, projectStatus);
+}
+
+export async function reorderWorkflowSteps(
+  projectId: string,
+  workflow: WorkflowNode[],
+  activeId: string,
+  overId: string,
+  projectStatus: Project["status"]
+): Promise<void> {
+  const updated = reorderWorkflow(workflow, activeId, overId);
   await saveWorkflow(projectId, updated, projectStatus);
 }
 

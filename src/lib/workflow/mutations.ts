@@ -240,3 +240,28 @@ export function deleteCustomStep(
 
   return finalizeWorkflow(updated);
 }
+
+export function reorderWorkflow(
+  workflow: WorkflowNode[],
+  activeId: string,
+  overId: string
+): WorkflowNode[] {
+  const sorted = [...workflow].sort((a, b) => a.order - b.order);
+  const activeIndex = sorted.findIndex((n) => n.id === activeId);
+  const overIndex = sorted.findIndex((n) => n.id === overId);
+
+  if (activeIndex === -1 || overIndex === -1 || activeIndex === overIndex) {
+    return workflow;
+  }
+
+  const [removed] = sorted.splice(activeIndex, 1);
+  sorted.splice(overIndex, 0, removed);
+
+  const updated = sorted.map((node, index) => ({
+    ...node,
+    order: index,
+  }));
+
+  return finalizeWorkflow(updated);
+}
+

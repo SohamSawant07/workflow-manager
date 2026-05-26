@@ -15,6 +15,7 @@ interface WorkflowAccordionProps {
   defaultOpen?: boolean;
   children: ReactNode;
   completedAt?: string;
+  dragHandle?: ReactNode;
 }
 
 export function WorkflowAccordion({
@@ -28,6 +29,7 @@ export function WorkflowAccordion({
   defaultOpen = false,
   children,
   completedAt,
+  dragHandle,
 }: WorkflowAccordionProps) {
   const [open, setOpen] = useState(defaultOpen || (!locked && !completed));
 
@@ -41,11 +43,20 @@ export function WorkflowAccordion({
             : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
       }`}
     >
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen(!open)}
-        className="flex w-full items-start gap-3 px-4 py-4 text-left sm:px-5"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen(!open);
+          }
+        }}
+        className="flex w-full items-start gap-3 px-4 py-4 text-left sm:px-5 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-t-xl"
       >
+        {dragHandle}
+
         <span
           className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
             completed
@@ -99,7 +110,7 @@ export function WorkflowAccordion({
             d="M9 5l7 7-7 7"
           />
         </svg>
-      </button>
+      </div>
 
       {open && (
         <div className="border-t border-zinc-100 px-4 py-4 sm:px-5 dark:border-zinc-800">

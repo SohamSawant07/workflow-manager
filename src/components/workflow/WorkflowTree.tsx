@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Project } from "@/types";
 import { WorkflowNodePanel } from "./WorkflowNodePanel";
 import { AddCustomStepModal } from "./AddCustomStepModal";
@@ -11,8 +11,22 @@ import {
   toggleWorkflowLightCategory,
   addWorkflowCustomStep,
   deleteWorkflowCustomStep,
+  reorderWorkflowSteps,
 } from "@/lib/firestore/projects";
 import { getSortedPipeline } from "@/lib/workflow/pipeline";
+import { reorderWorkflow } from "@/lib/workflow/mutations";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 interface AddStepDividerProps {
   onClick: () => void;
@@ -52,21 +66,121 @@ interface WorkflowTreeProps {
 }
 
 export function WorkflowTree({ project }: WorkflowTreeProps) {
-  const sorted = getSortedPipeline(project.workflow);
+  const [localWorkflow, setLocalWorkflow] = useState(project.workflow);
+  const sorted = getSortedPipeline(localWorkflow);
   const [insertAfterId, setInsertAfterId] = useState<string | null | undefined>(undefined);
+  const [mounted, setMounted] = useState(false);
 
-  return (
-    <div className="relative flex flex-col">
-      {/* Insert at the very beginning (index 0) */}
-      <AddStepDivider onClick={() => setInsertAfterId(null)} isFirst />
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-      {sorted.map((node, index) => {
-        const isLastStep = index === sorted.length - 1;
-        return (
-          <div key={node.id} className="flex flex-col">
+  // Keep local optimistic workflow in sync when project's real workflow updates
+  useEffect(() => {
+    setLocalWorkflow(project.workflow);
+  }, [project.workflow]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Ensure normal click is not registered as drag
+      },
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      // 1. Calculate the optimistic reordered workflow
+      const updated = reorderWorkflow(localWorkflow, String(active.id), String(over.id));
+      
+      // 2. Instantly update local state (buttery smooth visual transition)
+      setLocalWorkflow(updated);
+
+      // 3. Persist in background to Firebase
+      try {
+        await reorderWorkflowSteps(
+          project.id,
+          project.workflow,
+          String(active.id),
+          String(over.id),
+          project.status
+        );
+      } catch (error) {
+        console.error("Failed to save reordered workflow:", error);
+        // Rollback state if the database update fails
+        setLocalWorkflow(project.workflow);
+      }
+    }
+  };
+
+  const handleMoveUp = async (nodeId: string) => {
+    const index = sorted.findIndex((n) => n.id === nodeId);
+    if (index > 0) {
+      const activeId = nodeId;
+      const overId = sorted[index - 1].id;
+      
+      const updated = reorderWorkflow(localWorkflow, activeId, overId);
+      setLocalWorkflow(updated);
+
+      try {
+        await reorderWorkflowSteps(
+          project.id,
+          project.workflow,
+          activeId,
+          overId,
+          project.status
+        );
+      } catch (error) {
+        console.error("Failed to move step up:", error);
+        setLocalWorkflow(project.workflow);
+      }
+    }
+  };
+
+  const handleMoveDown = async (nodeId: string) => {
+    const index = sorted.findIndex((n) => n.id === nodeId);
+    if (index < sorted.length - 1) {
+      const activeId = nodeId;
+      const overId = sorted[index + 1].id;
+      
+      const updated = reorderWorkflow(localWorkflow, activeId, overId);
+      setLocalWorkflow(updated);
+
+      try {
+        await reorderWorkflowSteps(
+          project.id,
+          project.workflow,
+          activeId,
+          overId,
+          project.status
+        );
+      } catch (error) {
+        console.error("Failed to move step down:", error);
+        setLocalWorkflow(project.workflow);
+      }
+    }
+  };
+
+  if (!mounted) {
+    return (
+      <div className="relative flex flex-col">
+        {/* Insert at the very beginning (index 0) */}
+        <AddStepDivider onClick={() => setInsertAfterId(null)} isFirst />
+
+        {sorted.map((node, index) => {
+          const isLastStep = index === sorted.length - 1;
+          return (
             <WorkflowNodePanel
-              workflow={project.workflow}
+              key={node.id}
+              workflow={localWorkflow}
               node={node}
+              isLastStep={isLastStep}
+              canMoveUp={index > 0}
+              canMoveDown={index < sorted.length - 1}
+              onMoveUp={() => handleMoveUp(node.id)}
+              onMoveDown={() => handleMoveDown(node.id)}
+              onAddStepClick={(id) => setInsertAfterId(id)}
               onNodeUpdate={(nodeId, patch) =>
                 updateWorkflowNode(
                   project.id,
@@ -113,31 +227,122 @@ export function WorkflowTree({ project }: WorkflowTreeProps) {
                 }
               }}
             />
+          );
+        })}
 
-            {/* Insert after this node */}
-            <AddStepDivider
-              onClick={() => setInsertAfterId(node.id)}
-              isLast={isLastStep}
-            />
-          </div>
-        );
-      })}
+        <AddCustomStepModal
+          open={insertAfterId !== undefined}
+          onClose={() => setInsertAfterId(undefined)}
+          onConfirm={(step) => {
+            if (insertAfterId !== undefined) {
+              addWorkflowCustomStep(
+                project.id,
+                project.workflow,
+                insertAfterId,
+                step,
+                project.status
+              );
+            }
+          }}
+        />
+      </div>
+    );
+  }
 
-      <AddCustomStepModal
-        open={insertAfterId !== undefined}
-        onClose={() => setInsertAfterId(undefined)}
-        onConfirm={(step) => {
-          if (insertAfterId !== undefined) {
-            addWorkflowCustomStep(
-              project.id,
-              project.workflow,
-              insertAfterId,
-              step,
-              project.status
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={sorted.map((n) => n.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="relative flex flex-col">
+          {/* Insert at the very beginning (index 0) */}
+          <AddStepDivider onClick={() => setInsertAfterId(null)} isFirst />
+
+          {sorted.map((node, index) => {
+            const isLastStep = index === sorted.length - 1;
+            return (
+              <WorkflowNodePanel
+                key={node.id}
+                workflow={localWorkflow}
+                node={node}
+                isLastStep={isLastStep}
+                canMoveUp={index > 0}
+                canMoveDown={index < sorted.length - 1}
+                onMoveUp={() => handleMoveUp(node.id)}
+                onMoveDown={() => handleMoveDown(node.id)}
+                onAddStepClick={(id) => setInsertAfterId(id)}
+                onNodeUpdate={(nodeId, patch) =>
+                  updateWorkflowNode(
+                    project.id,
+                    project.workflow,
+                    nodeId,
+                    patch,
+                    project.status
+                  )
+                }
+                onTaskToggle={(nodeId, taskId) =>
+                  toggleWorkflowTask(
+                    project.id,
+                    project.workflow,
+                    nodeId,
+                    taskId,
+                    project.status
+                  )
+                }
+                onStepToggle={(nodeId) =>
+                  toggleWorkflowStep(
+                    project.id,
+                    project.workflow,
+                    nodeId,
+                    project.status
+                  )
+                }
+                onToggleCategory={(nodeId, categoryId) =>
+                  toggleWorkflowLightCategory(
+                    project.id,
+                    project.workflow,
+                    nodeId,
+                    categoryId,
+                    project.status
+                  )
+                }
+                onDeleteCustomStep={(nodeId) => {
+                  if (window.confirm("Are you sure you want to delete this custom step?")) {
+                    deleteWorkflowCustomStep(
+                      project.id,
+                      project.workflow,
+                      nodeId,
+                      project.status
+                    );
+                  }
+                }}
+              />
             );
-          }
-        }}
-      />
-    </div>
+          })}
+
+          <AddCustomStepModal
+            open={insertAfterId !== undefined}
+            onClose={() => setInsertAfterId(undefined)}
+            onConfirm={(step) => {
+              if (insertAfterId !== undefined) {
+                addWorkflowCustomStep(
+                  project.id,
+                  project.workflow,
+                  insertAfterId,
+                  step,
+                  project.status
+                );
+              }
+            }}
+          />
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
+
