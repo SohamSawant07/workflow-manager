@@ -20,7 +20,8 @@ interface ProjectPhotosProps {
 export function ProjectPhotos({ projectId, project }: ProjectPhotosProps) {
   const { user } = useAuthContext();
   const { photos, loading: photosLoading } = useProjectPhotos(projectId);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // States
   const [uploadingCount, setUploadingCount] = useState(0);
@@ -64,9 +65,12 @@ export function ProjectPhotos({ projectId, project }: ProjectPhotosProps) {
       setUploadError(`Failed to upload ${failCount} of ${files.length} images.`);
     }
 
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    // Reset inputs
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = "";
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = "";
     }
   };
 
@@ -84,9 +88,15 @@ export function ProjectPhotos({ projectId, project }: ProjectPhotosProps) {
     }
   };
 
-  const triggerUpload = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+  const triggerGalleryUpload = () => {
+    if (galleryInputRef.current) {
+      galleryInputRef.current.click();
+    }
+  };
+
+  const triggerCameraUpload = () => {
+    if (cameraInputRef.current) {
+      cameraInputRef.current.click();
     }
   };
 
@@ -106,23 +116,42 @@ export function ProjectPhotos({ projectId, project }: ProjectPhotosProps) {
         </div>
 
         {allowedToUpload && (
-          <div>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <input
               type="file"
-              ref={fileInputRef}
+              ref={galleryInputRef}
               onChange={handleFileChange}
               multiple
               accept="image/*"
               className="hidden"
             />
+            <input
+              type="file"
+              ref={cameraInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+            />
             <Button
-              onClick={triggerUpload}
+              onClick={triggerGalleryUpload}
               className="w-full sm:w-auto flex items-center justify-center gap-1.5 font-medium"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Upload Photos
+              Choose from Gallery
+            </Button>
+            <Button
+              onClick={triggerCameraUpload}
+              variant="secondary"
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 font-medium border border-zinc-200 dark:border-zinc-800"
+            >
+              <svg className="h-4 w-4 text-zinc-500 dark:text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Take Photo
             </Button>
           </div>
         )}
@@ -147,12 +176,21 @@ export function ProjectPhotos({ projectId, project }: ProjectPhotosProps) {
             No site photos have been uploaded for this project yet.
           </p>
           {allowedToUpload && (
-            <button
-              onClick={triggerUpload}
-              className="mt-2 text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-            >
-              Add Photos Now
-            </button>
+            <div className="mt-4 flex items-center justify-center gap-4">
+              <button
+                onClick={triggerGalleryUpload}
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+              >
+                Choose from Gallery
+              </button>
+              <span className="text-zinc-300 dark:text-zinc-700">|</span>
+              <button
+                onClick={triggerCameraUpload}
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+              >
+                Take Photo
+              </button>
+            </div>
           )}
         </div>
       ) : (
