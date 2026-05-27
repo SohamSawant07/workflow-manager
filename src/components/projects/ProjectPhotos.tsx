@@ -47,14 +47,16 @@ export function ProjectPhotos({ projectId, project }: ProjectPhotosProps) {
 
     let successCount = 0;
     let failCount = 0;
+    let lastErrorMessage = "";
 
     for (const file of files) {
       try {
         const result = await uploadImageToCloudinary(file);
         await addProjectPhoto(projectId, result.url, result.publicId);
         successCount++;
-      } catch (err) {
+      } catch (err: any) {
         console.error("Upload failed for file: ", file.name, err);
+        lastErrorMessage = err?.message || String(err);
         failCount++;
       } finally {
         setUploadingCount((prev) => Math.max(0, prev - 1));
@@ -62,7 +64,10 @@ export function ProjectPhotos({ projectId, project }: ProjectPhotosProps) {
     }
 
     if (failCount > 0) {
-      setUploadError(`Failed to upload ${failCount} of ${files.length} images.`);
+      const errorMsg = lastErrorMessage
+        ? `Failed to upload ${failCount} of ${files.length} images. Reason: ${lastErrorMessage}`
+        : `Failed to upload ${failCount} of ${files.length} images. Please check your connection and try again.`;
+      setUploadError(errorMsg);
     }
 
     // Reset inputs

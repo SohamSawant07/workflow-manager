@@ -25,19 +25,21 @@ export async function uploadImageToCloudinary(file: File): Promise<CloudinaryUpl
   const compressionOptions = {
     maxSizeMB: 1, // Max size 1MB
     maxWidthOrHeight: 1600, // Max dimension 1600px
-    useWebWorker: true,
+    useWebWorker: false, // Set to false to avoid WebWorker failures on mobile browsers (Safari/Chrome)
   };
 
   let fileToUpload = file;
   try {
     fileToUpload = await imageCompression(file, compressionOptions);
   } catch (error) {
-    console.warn("Image compression failed, proceeding with original file:", error);
+    console.error("Image compression failed for file: " + file.name, error);
   }
 
   // 2. Prepare FormData for Cloudinary Unsigned Upload
   const formData = new FormData();
-  formData.append("file", fileToUpload);
+  // Ensure the file has a valid name and extension so Cloudinary's unsigned uploader correctly processes it on mobile devices
+  const filename = fileToUpload.name || "mobile_upload.jpg";
+  formData.append("file", fileToUpload, filename);
   formData.append("upload_preset", uploadPreset);
 
   // 3. Post to Cloudinary's unsigned upload API endpoint
