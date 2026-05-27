@@ -37,6 +37,7 @@ export function WorkflowAccordion({
 }: WorkflowAccordionProps) {
   const [open, setOpen] = useState(defaultOpen || (!locked && !completed));
   const [isEditingDate, setIsEditingDate] = useState(false);
+  const [tempDate, setTempDate] = useState("");
 
   return (
     <div
@@ -92,20 +93,57 @@ export function WorkflowAccordion({
                 }}
               >
                 {isEditingDate && !locked && !readOnly ? (
-                  <input
-                    type="date"
-                    value={completedAt ? completedAt.split("T")[0] : ""}
-                    onChange={(e) => {
-                      if (e.target.value && onCompletedAtChange) {
-                        const d = new Date(e.target.value);
-                        onCompletedAtChange(d.toISOString());
-                      }
-                      setIsEditingDate(false);
-                    }}
-                    onBlur={() => setIsEditingDate(false)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="rounded border border-emerald-300 bg-white px-1 py-0.5 text-[10px] text-zinc-955 outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                  />
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="date"
+                      value={tempDate}
+                      onChange={(e) => setTempDate(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (tempDate && onCompletedAtChange) {
+                            const d = new Date(tempDate);
+                            onCompletedAtChange(d.toISOString());
+                          }
+                          setIsEditingDate(false);
+                        } else if (e.key === "Escape") {
+                          setIsEditingDate(false);
+                        }
+                      }}
+                      className="rounded border border-emerald-300 bg-white px-1.5 py-0.5 text-[10px] text-zinc-900 outline-none focus:ring-1 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (tempDate && onCompletedAtChange) {
+                          const d = new Date(tempDate);
+                          onCompletedAtChange(d.toISOString());
+                        }
+                        setIsEditingDate(false);
+                      }}
+                      className="rounded bg-emerald-600 p-0.5 text-white hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400 flex items-center justify-center shrink-0"
+                      title="Save date"
+                    >
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditingDate(false);
+                      }}
+                      className="rounded bg-zinc-200 p-0.5 text-zinc-600 hover:bg-zinc-300 dark:bg-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-600 flex items-center justify-center shrink-0"
+                      title="Cancel"
+                    >
+                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
                 ) : (
                   <>
                     <span>Completed on {formatDate(completedAt)}</span>
@@ -114,6 +152,7 @@ export function WorkflowAccordion({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          setTempDate(completedAt ? completedAt.split("T")[0] : "");
                           setIsEditingDate(true);
                         }}
                         className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
