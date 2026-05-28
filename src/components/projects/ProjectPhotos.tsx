@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import type { Project } from "@/types";
 import { useAuthContext } from "@/components/providers/AuthProvider";
 import { useProjectPhotos } from "@/hooks/useProjectPhotos";
-import { addProjectPhoto, deleteProjectPhoto } from "@/lib/firestore/projects";
+import { addProjectPhoto, deleteProjectPhoto, type ProjectPhoto } from "@/lib/firestore/projects";
 import { canUploadPhoto, canDeletePhoto } from "@/lib/auth/permissions";
 import { uploadImageToCloudinary } from "@/lib/cloudinary";
 import { Button } from "@/components/ui/Button";
@@ -27,6 +27,7 @@ export function ProjectPhotos({ projectId, project }: ProjectPhotosProps) {
   const [uploadingCount, setUploadingCount] = useState(0);
   const [uploadError, setUploadError] = useState("");
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   // State for delete confirmation
   const [photoToDelete, setPhotoToDelete] = useState<string | null>(null);
@@ -104,6 +105,56 @@ export function ProjectPhotos({ projectId, project }: ProjectPhotosProps) {
       cameraInputRef.current.click();
     }
   };
+
+  const renderPhotoCard = (photo: ProjectPhoto) => (
+    <div
+      key={photo.id}
+      className="group aspect-square relative rounded-xl border border-zinc-150 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/20 overflow-hidden shadow-sm hover:shadow-md hover:ring-1 hover:ring-indigo-500/25 transition-all animate-fade-in"
+    >
+      {/* Image element */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={photo.url}
+        alt={`Site photo uploaded by ${photo.uploadedBy}`}
+        className="w-full h-full object-cover cursor-zoom-in group-hover:scale-105 transition-transform duration-300"
+        onClick={() => setLightboxUrl(photo.url)}
+      />
+
+      {/* Text overlays / actions on hover & mobile tap */}
+      <div
+        onClick={() => setLightboxUrl(photo.url)}
+        className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/40 opacity-100 pointer-events-auto sm:opacity-0 sm:pointer-events-none sm:group-hover:opacity-100 sm:group-hover:pointer-events-auto transition-all flex flex-col justify-between p-3 cursor-zoom-in"
+      >
+        {/* Delete button (positioned at top right) */}
+        <div className="flex justify-end">
+          {allowedToDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setPhotoToDelete(photo.id);
+              }}
+              className="flex h-9 w-9 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-red-600/90 text-white hover:bg-red-700 transition-colors shadow-sm cursor-pointer"
+              title="Delete photo"
+            >
+              <svg className="h-5 w-5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Metadata details (positioned at bottom) */}
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold text-zinc-200 truncate">
+            By {photo.uploadedBy}
+          </p>
+          <p className="text-[9px] text-zinc-300 font-medium">
+            {photo.uploadedAt ? formatDate(photo.uploadedAt) : "—"}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 shadow-sm transition-all space-y-6">
@@ -199,64 +250,68 @@ export function ProjectPhotos({ projectId, project }: ProjectPhotosProps) {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-          {/* Upload Skeletons */}
-          {Array.from({ length: uploadingCount }).map((_, i) => (
-            <div
-              key={`upload-skeleton-${i}`}
-              className="aspect-square relative rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/20 flex flex-col items-center justify-center space-y-2 animate-pulse"
-            >
-              <div className="flex items-center justify-center h-8 w-8 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400">
-                <Spinner className="!h-5 !w-5" />
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+            {/* Upload Skeletons */}
+            {Array.from({ length: uploadingCount }).map((_, i) => (
+              <div
+                key={`upload-skeleton-${i}`}
+                className="aspect-square relative rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/20 flex flex-col items-center justify-center space-y-2 animate-pulse"
+              >
+                <div className="flex items-center justify-center h-8 w-8 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400">
+                  <Spinner className="!h-5 !w-5" />
+                </div>
+                <span className="text-[10px] font-medium text-zinc-400">Uploading...</span>
               </div>
-              <span className="text-[10px] font-medium text-zinc-400">Uploading...</span>
-            </div>
-          ))}
+            ))}
 
-          {/* Photo Cards */}
-          {photos.map((photo) => (
+            {/* Always Visible Photos */}
+            {photos.slice(0, 4).map((photo) => renderPhotoCard(photo))}
+          </div>
+
+          {/* Collapsible Remaining Photos Container */}
+          {photos.length > 4 && (
             <div
-              key={photo.id}
-              className="group aspect-square relative rounded-xl border border-zinc-150 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/20 overflow-hidden shadow-sm hover:shadow-md hover:ring-1 hover:ring-indigo-500/25 transition-all"
+              className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                isExpanded
+                  ? "max-h-[3000px] opacity-100"
+                  : "max-h-0 opacity-0 pointer-events-none"
+              }`}
             >
-              {/* Image element */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photo.url}
-                alt={`Site photo uploaded by ${photo.uploadedBy}`}
-                className="w-full h-full object-cover cursor-zoom-in group-hover:scale-105 transition-transform duration-300"
-                onClick={() => setLightboxUrl(photo.url)}
-              />
-
-              {/* Text overlays / actions on hover */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-3 pointer-events-none">
-                {/* Delete button (positioned at top right) */}
-                <div className="flex justify-end pointer-events-auto">
-                  {allowedToDelete && (
-                    <button
-                      onClick={() => setPhotoToDelete(photo.id)}
-                      className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-600/90 text-white hover:bg-red-700 transition-colors shadow-sm"
-                      title="Delete photo"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-
-                {/* Metadata details (positioned at bottom) */}
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold text-zinc-200 truncate">
-                    By {photo.uploadedBy}
-                  </p>
-                  <p className="text-[9px] text-zinc-300 font-medium">
-                    {photo.uploadedAt ? formatDate(photo.uploadedAt) : "—"}
-                  </p>
-                </div>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 pt-4">
+                {photos.slice(4).map((photo) => renderPhotoCard(photo))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* Expand/Collapse Toggle Button */}
+          {photos.length > 4 && (
+            <div className="flex justify-center pt-2">
+              <Button
+                variant="secondary"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-lg border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors shadow-sm"
+              >
+                <span>
+                  {isExpanded
+                    ? "Show Less"
+                    : `Show ${photos.length - 4} More Photo${
+                        photos.length - 4 > 1 ? "s" : ""
+                      }`}
+                </span>
+                <svg
+                  className={`h-4 w-4 text-zinc-500 dark:text-zinc-400 transition-transform duration-300 ${
+                    isExpanded ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
