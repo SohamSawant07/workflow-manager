@@ -53,7 +53,6 @@ function ClientPortalContent() {
       const q = query(
         collection(db, "projects"),
         where("clientAccessCode", "==", sessionCode.trim()),
-        where("deleted", "==", false)
       );
       
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -99,10 +98,10 @@ function ClientPortalContent() {
       const q = query(
         collection(db, "projects"),
         where("clientAccessCode", "==", accessCode.trim()),
-        where("deleted", "==", false)
       );
 
       const snapshot = await getDocs(q);
+      console.log("Docs found:", snapshot.size);
 
       if (!snapshot.empty) {
         const docSnap = snapshot.docs[0];
