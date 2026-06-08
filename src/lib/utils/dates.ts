@@ -39,3 +39,15 @@ export function formatDeadlineLabel(deadline?: string): string {
   if (days > 0) return `${days} days remaining · ${formatDate(deadline)}`;
   return `${Math.abs(days)} days overdue · ${formatDate(deadline)}`;
 }
+
+export function formatAlertDate(dateStr?: string): string {
+  if (!dateStr) return "N/A";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  const day = String(d.getDate()).padStart(2, "0");
+  const monthNames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+  return `${day} ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
+}

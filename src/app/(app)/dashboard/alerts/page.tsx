@@ -29,8 +29,8 @@ export default function AlertsPage() {
       return b.daysRemaining - a.daysRemaining;
     }
     if (sortBy === "due_date") {
-      const dateA = a.project.deadline ? new Date(a.project.deadline).getTime() : Infinity;
-      const dateB = b.project.deadline ? new Date(b.project.deadline).getTime() : Infinity;
+      const dateA = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const dateB = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
       return dateA - dateB;
     }
     if (sortBy === "project_name") {
@@ -104,7 +104,7 @@ export default function AlertsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sortedAlerts.map((alert) => (
-            <AlertCard key={alert.project.id} alert={alert} />
+            <AlertCard key={alert.id} alert={alert} />
           ))}
         </div>
       )}

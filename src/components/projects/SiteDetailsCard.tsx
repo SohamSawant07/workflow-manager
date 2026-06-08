@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { Project, ProjectStatus } from "@/types";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -39,8 +39,10 @@ export function SiteDetailsCard({ project }: SiteDetailsCardProps) {
     project.siteContacts ?? []
   );
 
-  // Sync state with project updates from Firestore subscription
-  useEffect(() => {
+  const [prevProject, setPrevProject] = useState(project);
+
+  if (project !== prevProject) {
+    setPrevProject(project);
     setName(project.name);
     setClientName(project.clientName);
     setSiteManagerName(project.siteManagerName ?? "");
@@ -53,7 +55,7 @@ export function SiteDetailsCard({ project }: SiteDetailsCardProps) {
     setClientPhone(project.clientPhone ?? "");
     setStartDate(project.startDate ? project.startDate.split("T")[0] : "");
     setContacts(project.siteContacts ?? []);
-  }, [project]);
+  }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();

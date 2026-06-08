@@ -42,7 +42,7 @@ export function UrgentAlertsSection({ alerts }: UrgentAlertsSectionProps) {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {displayedAlerts.map((alert) => (
-          <AlertCard key={alert.project.id} alert={alert} />
+          <AlertCard key={alert.id} alert={alert} />
         ))}
       </div>
     </div>

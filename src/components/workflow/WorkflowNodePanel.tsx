@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { WorkflowNode } from "@/types/workflow";
 import { WorkflowAccordion } from "./WorkflowAccordion";
 import { ChecklistNodeContent } from "./ChecklistNodeContent";
@@ -26,10 +26,12 @@ interface NotesSectionProps {
 
 function NotesSection({ nodeId, initialNotes, disabled, onNodeUpdate }: NotesSectionProps) {
   const [localNotes, setLocalNotes] = useState(initialNotes);
+  const [prevInitialNotes, setPrevInitialNotes] = useState(initialNotes);
 
-  useEffect(() => {
+  if (initialNotes !== prevInitialNotes) {
+    setPrevInitialNotes(initialNotes);
     setLocalNotes(initialNotes);
-  }, [initialNotes]);
+  }
 
   const handleBlur = () => {
     if (disabled) return;
@@ -52,6 +54,68 @@ function NotesSection({ nodeId, initialNotes, disabled, onNodeUpdate }: NotesSec
         rows={2}
         className="w-full rounded-lg border border-zinc-200 bg-white p-2 text-sm text-zinc-800 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500 disabled:opacity-60"
       />
+    </div>
+  );
+}
+
+interface DeadlineSectionProps {
+  nodeId: string;
+  initialDeadline: string;
+  disabled?: boolean;
+  onNodeUpdate: (
+    nodeId: string,
+    patch: import("@/types/workflow").WorkflowNodePatch
+  ) => void;
+}
+
+function DeadlineSection({ nodeId, initialDeadline, disabled, onNodeUpdate }: DeadlineSectionProps) {
+  const [localDeadline, setLocalDeadline] = useState(initialDeadline ? initialDeadline.split("T")[0] : "");
+  const [prevInitialDeadline, setPrevInitialDeadline] = useState(initialDeadline);
+
+  if (initialDeadline !== prevInitialDeadline) {
+    setPrevInitialDeadline(initialDeadline);
+    setLocalDeadline(initialDeadline ? initialDeadline.split("T")[0] : "");
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
+    const val = e.target.value;
+    setLocalDeadline(val);
+    if (!val) {
+      onNodeUpdate(nodeId, { taskDeadline: "" });
+    } else {
+      const d = new Date(val);
+      onNodeUpdate(nodeId, { taskDeadline: d.toISOString() });
+    }
+  };
+
+  return (
+    <div className="mt-4 border-t border-zinc-100 pt-4 dark:border-zinc-800 flex flex-col gap-1.5">
+      <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+        Task Deadline (Optional)
+      </label>
+      <div className="flex items-center gap-2">
+        <input
+          type="date"
+          value={localDeadline}
+          onChange={handleChange}
+          disabled={disabled}
+          className="rounded-lg border border-zinc-200 bg-white p-2 text-sm text-zinc-800 placeholder-zinc-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500 disabled:opacity-60"
+        />
+        {localDeadline && !disabled && (
+          <button
+            type="button"
+            onClick={() => {
+              setLocalDeadline("");
+              onNodeUpdate(nodeId, { taskDeadline: "" });
+            }}
+            className="text-xs text-red-500 hover:text-red-700 font-semibold"
+            title="Remove deadline"
+          >
+            Clear
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -160,6 +224,7 @@ export function WorkflowNodePanel({
         description={node.description}
         stepNumber={stepNumber}
         completedAt={node.completedAt}
+        taskDeadline={node.taskDeadline}
         readOnly={readOnly}
         onCompletedAtChange={(newDate) => onNodeUpdate(node.id, { completedAt: newDate })}
         dragHandle={
@@ -259,6 +324,13 @@ export function WorkflowNodePanel({
           <NotesSection
             nodeId={node.id}
             initialNotes={node.notes ?? ""}
+            disabled={readOnly}
+            onNodeUpdate={onNodeUpdate}
+          />
+
+          <DeadlineSection
+            nodeId={node.id}
+            initialDeadline={node.taskDeadline ?? ""}
             disabled={readOnly}
             onNodeUpdate={onNodeUpdate}
           />

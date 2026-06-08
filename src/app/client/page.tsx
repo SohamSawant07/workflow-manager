@@ -36,20 +36,26 @@ function ClientPortalContent() {
   useEffect(() => {
     const codeParam = searchParams.get("code");
     if (codeParam) {
-      setAccessCode(codeParam);
+      requestAnimationFrame(() => {
+        setAccessCode(codeParam);
+      });
     }
   }, [searchParams]);
 
   // Read credentials from sessionStorage on mount
   useEffect(() => {
-    setSessionCode(sessionStorage.getItem("clientAccessCode"));
-    setSessionPhone(sessionStorage.getItem("clientPhone"));
+    requestAnimationFrame(() => {
+      setSessionCode(sessionStorage.getItem("clientAccessCode"));
+      setSessionPhone(sessionStorage.getItem("clientPhone"));
+    });
   }, []);
 
   // Listen to Firestore project updates in real-time when authenticated
   useEffect(() => {
     if (sessionCode && sessionPhone) {
-      setVerifyingSession(true);
+      requestAnimationFrame(() => {
+        setVerifyingSession(true);
+      });
       const q = query(
         collection(db, "projects"),
         where("clientAccessCode", "==", sessionCode.trim()),
@@ -78,9 +84,11 @@ function ClientPortalContent() {
       
       return () => unsubscribe();
     } else {
-      setProject(null);
-      setAuthenticated(false);
-      setVerifyingSession(false);
+      requestAnimationFrame(() => {
+        setProject(null);
+        setAuthenticated(false);
+        setVerifyingSession(false);
+      });
     }
   }, [sessionCode, sessionPhone]);
 
@@ -128,14 +136,14 @@ function ClientPortalContent() {
     }
   };
 
-  const handleLogout = () => {
+  function handleLogout() {
     sessionStorage.removeItem("clientAccessCode");
     sessionStorage.removeItem("clientPhone");
     setSessionCode(null);
     setSessionPhone(null);
     setProject(null);
     setAuthenticated(false);
-  };
+  }
 
   if (verifyingSession) {
     return (

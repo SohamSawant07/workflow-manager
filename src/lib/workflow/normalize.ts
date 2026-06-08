@@ -74,6 +74,7 @@ function nodeBaseDefaults(
     completedAt: raw.completedAt ?? undefined,
     notes: String(raw.notes ?? EMPTY).trim(),
     amount: raw.amount !== undefined && raw.amount !== null ? Number(raw.amount) : null,
+    taskDeadline: raw.taskDeadline || undefined,
   };
 }
 

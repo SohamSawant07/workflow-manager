@@ -77,13 +77,17 @@ export function WorkflowTree({ project }: WorkflowTreeProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    requestAnimationFrame(() => {
+      setMounted(true);
+    });
   }, []);
 
-  // Keep local optimistic workflow in sync when project's real workflow updates
-  useEffect(() => {
+  const [prevProjectWorkflow, setPrevProjectWorkflow] = useState(project.workflow);
+
+  if (project.workflow !== prevProjectWorkflow) {
+    setPrevProjectWorkflow(project.workflow);
     setLocalWorkflow(project.workflow);
-  }, [project.workflow]);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

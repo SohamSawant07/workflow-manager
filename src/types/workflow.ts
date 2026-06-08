@@ -35,6 +35,7 @@ export interface WorkflowNodeBase {
   completedAt?: string;
   notes?: string;
   amount?: number | null;
+  taskDeadline?: string;
 }
 
 export interface ChecklistWorkflowNode extends WorkflowNodeBase {
@@ -73,6 +74,7 @@ export type WorkflowNodePatch = Partial<
   tasks?: WorkflowTask[];
   amount?: number | null;
   notes?: string;
+  taskDeadline?: string;
 };
 
 export type WorkflowTaskPatch = Partial<Pick<WorkflowTask, "completed">>;

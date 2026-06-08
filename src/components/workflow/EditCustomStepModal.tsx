@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -14,6 +14,7 @@ interface EditCustomStepModalProps {
     title: string;
     description: string;
     notes: string;
+    taskDeadline?: string;
   }) => void;
 }
 
@@ -26,17 +27,23 @@ export function EditCustomStepModal({
   const [title, setTitle] = useState(node.title);
   const [description, setDescription] = useState(node.description ?? "");
   const [notes, setNotes] = useState(node.notes ?? "");
+  const [taskDeadline, setTaskDeadline] = useState(node.taskDeadline ? node.taskDeadline.split("T")[0] : "");
   const [error, setError] = useState("");
 
-  // Sync state when node changes or modal opens
-  useEffect(() => {
+  const [prevOpen, setPrevOpen] = useState(open);
+  const [prevNodeId, setPrevNodeId] = useState(node.id);
+
+  if (open !== prevOpen || node.id !== prevNodeId) {
+    setPrevOpen(open);
+    setPrevNodeId(node.id);
     if (open) {
       setTitle(node.title);
       setDescription(node.description ?? "");
       setNotes(node.notes ?? "");
+      setTaskDeadline(node.taskDeadline ? node.taskDeadline.split("T")[0] : "");
       setError("");
     }
-  }, [open, node]);
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +57,7 @@ export function EditCustomStepModal({
       title: title.trim(),
       description: description.trim(),
       notes: notes.trim(),
+      taskDeadline: taskDeadline ? new Date(taskDeadline).toISOString() : "",
     });
     onClose();
   };
@@ -84,6 +92,13 @@ export function EditCustomStepModal({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="e.g. Final verification before next phase"
+        />
+
+        <Input
+          label="Task Deadline (Optional)"
+          type="date"
+          value={taskDeadline}
+          onChange={(e) => setTaskDeadline(e.target.value)}
         />
 
         <div className="flex flex-col gap-1">

@@ -46,7 +46,6 @@ export function ProjectPhotos({ projectId, project }: ProjectPhotosProps) {
     setUploadingCount(files.length);
     setUploadError("");
 
-    let successCount = 0;
     let failCount = 0;
     let lastErrorMessage = "";
 
@@ -54,10 +53,9 @@ export function ProjectPhotos({ projectId, project }: ProjectPhotosProps) {
       try {
         const result = await uploadImageToCloudinary(file);
         await addProjectPhoto(projectId, result.url, result.publicId);
-        successCount++;
-      } catch (err: any) {
+      } catch (err) {
         console.error("Upload failed for file: ", file.name, err);
-        lastErrorMessage = err?.message || String(err);
+        lastErrorMessage = err instanceof Error ? err.message : String(err);
         failCount++;
       } finally {
         setUploadingCount((prev) => Math.max(0, prev - 1));

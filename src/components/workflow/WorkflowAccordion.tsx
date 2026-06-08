@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { formatDate } from "@/lib/utils/dates";
+import { formatDate, formatAlertDate } from "@/lib/utils/dates";
 
 interface WorkflowAccordionProps {
   title: string;
@@ -18,6 +18,7 @@ interface WorkflowAccordionProps {
   dragHandle?: ReactNode;
   readOnly?: boolean;
   onCompletedAtChange?: (newDate: string) => void;
+  taskDeadline?: string;
 }
 
 export function WorkflowAccordion({
@@ -34,6 +35,7 @@ export function WorkflowAccordion({
   dragHandle,
   readOnly = false,
   onCompletedAtChange,
+  taskDeadline,
 }: WorkflowAccordionProps) {
   const [open, setOpen] = useState(defaultOpen || (!locked && !completed));
   const [isEditingDate, setIsEditingDate] = useState(false);
@@ -174,6 +176,12 @@ export function WorkflowAccordion({
           {locked && blockedReason?.trim() && (
             <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
               {blockedReason}
+            </p>
+          )}
+          {taskDeadline && (
+            <p className="mt-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+              <span>Due:</span>
+              <span>{formatAlertDate(taskDeadline)}</span>
             </p>
           )}
           <div className="mt-3 max-w-md">

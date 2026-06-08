@@ -44,6 +44,7 @@ function storageNodeBase(node: WorkflowNode) {
     completedAt: node.completedAt ?? null,
     notes: node.notes ?? EMPTY,
     amount: node.amount ?? null,
+    taskDeadline: node.taskDeadline ?? null,
   };
 }
 

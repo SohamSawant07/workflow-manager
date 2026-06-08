@@ -25,8 +25,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem("theme") as Theme | null;
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const initial = stored ?? (prefersDark ? "dark" : "light");
-    setTheme(initial);
-    setMounted(true);
+    requestAnimationFrame(() => {
+      setTheme(initial);
+      setMounted(true);
+    });
   }, []);
 
   useEffect(() => {

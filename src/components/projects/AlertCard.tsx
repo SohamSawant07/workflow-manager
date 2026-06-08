@@ -65,6 +65,15 @@ export function AlertCard({ alert }: AlertCardProps) {
                 {project.name}
               </span>
             </h3>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+                alert.type === "project"
+                  ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400 border border-indigo-200/50 dark:border-indigo-900/30"
+                  : "bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-400 border border-teal-200/50 dark:border-teal-900/30"
+              }`}>
+                {alert.type === "project" ? "Project Deadline" : "Task Deadline"}
+              </span>
+            </div>
           </div>
           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${currentColors.badge}`}>
             {priority === "red" ? "Overdue" : "Urgent"}
@@ -79,17 +88,26 @@ export function AlertCard({ alert }: AlertCardProps) {
             </span>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-zinc-500 dark:text-zinc-400">Current Step:</span>
-            <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[200px]" title={currentStep}>
-              {currentStep}
-            </span>
-          </div>
+          {alert.type === "project" ? (
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500 dark:text-zinc-400">Current Step:</span>
+              <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[200px]" title={currentStep}>
+                {currentStep}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <span className="text-zinc-500 dark:text-zinc-400">Task:</span>
+              <span className="font-bold text-indigo-600 dark:text-indigo-400 truncate max-w-[200px]" title={alert.taskName}>
+                {alert.taskName}
+              </span>
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <span className="text-zinc-500 dark:text-zinc-400">Due Date:</span>
             <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-              {formatAlertDate(project.deadline)}
+              {formatAlertDate(alert.dueDate)}
             </span>
           </div>
         </div>

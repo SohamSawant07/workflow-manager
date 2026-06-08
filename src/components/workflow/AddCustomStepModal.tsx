@@ -15,6 +15,7 @@ interface AddCustomStepModalProps {
     type: WorkflowNode["type"];
     description: string;
     taskTitles?: string[];
+    taskDeadline?: string;
   }) => void;
 }
 
@@ -27,6 +28,7 @@ export function AddCustomStepModal({
   const [type, setType] = useState<WorkflowNode["type"]>("checklist");
   const [description, setDescription] = useState("");
   const [tasksString, setTasksString] = useState("");
+  const [taskDeadline, setTaskDeadline] = useState("");
   const [error, setError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,6 +57,7 @@ export function AddCustomStepModal({
       type,
       description: description.trim(),
       taskTitles,
+      taskDeadline: taskDeadline ? new Date(taskDeadline).toISOString() : undefined,
     });
     
     // Reset state
@@ -62,6 +65,7 @@ export function AddCustomStepModal({
     setType("checklist");
     setDescription("");
     setTasksString("");
+    setTaskDeadline("");
     onClose();
   };
 
@@ -116,6 +120,13 @@ export function AddCustomStepModal({
             placeholder="e.g. Check wiring, Test switches, Client sign-off"
           />
         )}
+
+        <Input
+          label="Task Deadline (Optional)"
+          type="date"
+          value={taskDeadline}
+          onChange={(e) => setTaskDeadline(e.target.value)}
+        />
 
         {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
       </form>
