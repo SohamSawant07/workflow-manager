@@ -141,6 +141,8 @@ export async function updateProject(
 
   if (fields.startDate !== undefined) payload.startDate = fields.startDate;
   if (fields.siteContacts !== undefined) payload.siteContacts = fields.siteContacts;
+  if (fields.siteSOP !== undefined) payload.siteSOP = fields.siteSOP ?? deleteField();
+  if (fields.siteLayout !== undefined) payload.siteLayout = fields.siteLayout ?? deleteField();
 
   await updateDoc(doc(db, COLLECTION, id), payload);
 

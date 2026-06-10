@@ -6,6 +6,7 @@ import { ProjectHeader } from "@/components/projects/ProjectHeader";
 import { SiteDetailsCard } from "@/components/projects/SiteDetailsCard";
 import { ClientAccessCard } from "@/components/projects/ClientAccessCard";
 import { ProjectPhotos } from "@/components/projects/ProjectPhotos";
+import { ProjectDocuments } from "@/components/projects/ProjectDocuments";
 import { WorkflowTree } from "@/components/workflow/WorkflowTree";
 import { Spinner } from "@/components/ui/Spinner";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -46,6 +47,7 @@ export default function ProjectPage({ params }: ProjectPageProps) {
     <div className="mx-auto max-w-3xl space-y-6">
       <ProjectHeader project={project} />
       <SiteDetailsCard project={project} />
+      <ProjectDocuments project={project} />
       <ClientAccessCard project={project} />
       <ProjectPhotos projectId={project.id} project={project} />
       <div>

@@ -1,28 +1,62 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+
+const OLLAMA_AVAILABLE = process.env.NEXT_PUBLIC_OLLAMA_AVAILABLE === "true";
+const STORAGE_KEY = "sopbot-chat-history";
+
+type ModelChoice = "gemini" | "ollama";
 
 interface Message {
   id: string;
   role: "user" | "bot";
   text: string;
   source?: string;
+  answeredBy?: "gemini" | "ollama";
   error?: boolean;
 }
 
+const WELCOME_MESSAGE: Message = {
+  id: "welcome",
+  role: "bot",
+  text: "Hi! I'm SOP-Bot for Galaxy Home Automation. Ask me anything about our SOPs, pricing, warranties, installation guides, or live project data.",
+  source: "Galaxy SOP Knowledge Base",
+};
+
+function loadHistory(): Message[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return [WELCOME_MESSAGE];
+}
+
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "bot",
-      text: "Hi! I'm SOP-Bot for Galaxy Home Automation. Ask me anything about our SOPs, pricing, warranties, installation guides, or live project data.",
-      source: "Galaxy SOP Knowledge Base",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+  const [hydrated, setHydrated] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<ModelChoice>("gemini");
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Restore from localStorage on mount
+  useEffect(() => {
+    setMessages(loadHistory());
+    setHydrated(true);
+  }, []);
+
+  // Persist to localStorage whenever messages change (after hydration)
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch {}
+  }, [messages, hydrated]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -38,10 +72,15 @@ export default function ChatPage() {
     setLoading(true);
 
     try {
+      // Build history from current messages (non-error bot messages + user messages), excluding welcome
+      const history = messages
+        .filter((m) => m.id !== "welcome" && !m.error)
+        .map((m) => ({ role: m.role, content: m.text }));
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: text, model: selectedModel, history }),
       });
 
       const data = await res.json();
@@ -57,13 +96,17 @@ export default function ChatPage() {
           },
         ]);
       } else {
+        const fellBack = selectedModel === "ollama" && data.answeredBy === "gemini";
         setMessages((prev) => [
           ...prev,
           {
             id: crypto.randomUUID(),
             role: "bot",
-            text: data.answer,
+            text: fellBack
+              ? `Local model unavailable, switching to Gemini.\n\n${data.answer}`
+              : data.answer,
             source: data.source,
+            answeredBy: data.answeredBy,
           },
         ]);
       }
@@ -104,14 +147,8 @@ export default function ChatPage() {
   }
 
   function clearChat() {
-    setMessages([
-      {
-        id: "welcome",
-        role: "bot",
-        text: "Hi! I'm SOP-Bot for Galaxy Home Automation. Ask me anything about our SOPs, pricing, warranties, installation guides, or live project data.",
-        source: "Galaxy SOP Knowledge Base",
-      },
-    ]);
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    setMessages([WELCOME_MESSAGE]);
     setInput("");
     inputRef.current?.focus();
   }
@@ -131,15 +168,41 @@ export default function ChatPage() {
             <p className="text-xs text-zinc-500">Galaxy Home Automation · Zigbee Expert</p>
           </div>
         </div>
-        <button
-          onClick={clearChat}
-          className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition-colors"
-        >
+        <div className="flex items-center gap-2">
+          {OLLAMA_AVAILABLE && (
+            <div className="flex rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden text-xs font-medium">
+              <button
+                onClick={() => setSelectedModel("gemini")}
+                className={`px-3 py-1.5 transition-colors ${
+                  selectedModel === "gemini"
+                    ? "bg-indigo-600 text-white"
+                    : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                }`}
+              >
+                Gemini
+              </button>
+              <button
+                onClick={() => setSelectedModel("ollama")}
+                className={`px-3 py-1.5 transition-colors ${
+                  selectedModel === "ollama"
+                    ? "bg-indigo-600 text-white"
+                    : "text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                }`}
+              >
+                Qwen Local
+              </button>
+            </div>
+          )}
+          <button
+            onClick={clearChat}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition-colors"
+          >
           <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
-          Clear
-        </button>
+            Clear
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -155,15 +218,30 @@ export default function ChatPage() {
             )}
             <div className={`max-w-[75%] ${msg.role === "user" ? "max-w-[65%]" : ""}`}>
               <div
-                className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                   msg.role === "user"
-                    ? "bg-indigo-600 text-white rounded-tr-sm"
+                    ? "bg-indigo-600 text-white rounded-tr-sm whitespace-pre-wrap"
                     : msg.error
-                    ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-tl-sm"
+                    ? "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-tl-sm whitespace-pre-wrap"
                     : "bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-800 rounded-tl-sm"
                 }`}
               >
-                {msg.text}
+                {msg.role === "bot" && !msg.error ? (
+                  <ReactMarkdown
+                    components={{
+                      p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+                      strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                      ul: ({ children }) => <ul className="list-disc pl-4 mb-1 space-y-0.5">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-4 mb-1 space-y-0.5">{children}</ol>,
+                      li: ({ children }) => <li>{children}</li>,
+                      code: ({ children }) => <code className="bg-zinc-100 dark:bg-zinc-800 rounded px-1 text-xs font-mono">{children}</code>,
+                    }}
+                  >
+                    {msg.text}
+                  </ReactMarkdown>
+                ) : (
+                  msg.text
+                )}
               </div>
               {msg.source && !msg.error && (
                 <p className="mt-1 text-xs text-zinc-400 dark:text-zinc-500 flex items-center gap-1">
@@ -171,6 +249,15 @@ export default function ChatPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   {msg.source}
+                  {msg.answeredBy && (
+                    <span className={`ml-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                      msg.answeredBy === "ollama"
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                        : "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400"
+                    }`}>
+                      {msg.answeredBy === "ollama" ? "Qwen Local" : "Gemini"}
+                    </span>
+                  )}
                 </p>
               )}
               {msg.error && (
@@ -195,10 +282,17 @@ export default function ChatPage() {
               </svg>
             </div>
             <div className="rounded-2xl rounded-tl-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-3">
-              <div className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce [animation-delay:-0.3s]" />
-                <span className="h-2 w-2 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce [animation-delay:-0.15s]" />
-                <span className="h-2 w-2 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce" />
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce [animation-delay:-0.3s]" />
+                  <span className="h-2 w-2 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce [animation-delay:-0.15s]" />
+                  <span className="h-2 w-2 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce" />
+                </div>
+                {selectedModel === "ollama" && (
+                  <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                    Qwen is thinking… (usually 30–45 sec)
+                  </span>
+                )}
               </div>
             </div>
           </div>

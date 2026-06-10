@@ -51,6 +51,21 @@ export interface ProjectFirestoreDocument {
   deleted?: boolean;
   deletedAt?: string | null;
   deletedBy?: string | null;
+  siteSOP?: {
+    type: "file" | "link";
+    url: string;
+    fileName?: string;
+    uploadedAt: string;
+    uploadedBy: string;
+  } | null;
+  siteLayout?: Array<{
+    type: "file" | "link";
+    fileType?: "pdf" | "image";
+    url: string;
+    fileName?: string;
+    uploadedAt: string;
+    uploadedBy: string;
+  }> | null;
 }
 
 function clampProgress(value: number): number {
@@ -227,6 +242,12 @@ export function buildFirestoreUpdateDocument(
   if (updates.deletedBy !== undefined) {
     result.deletedBy = updates.deletedBy;
   }
+  if ("siteSOP" in updates) {
+    result.siteSOP = updates.siteSOP ?? null;
+  }
+  if ("siteLayout" in updates) {
+    result.siteLayout = updates.siteLayout ?? null;
+  }
 
   return sanitizeFirestorePayload(result);
 }
@@ -310,6 +331,8 @@ export function normalizeProjectFromFirestore(
     deleted: !!data.deleted,
     deletedAt: data.deletedAt ? toIso(data.deletedAt, "") : undefined,
     deletedBy: data.deletedBy ? String(data.deletedBy) : undefined,
+    siteSOP: data.siteSOP ? (data.siteSOP as Project["siteSOP"]) : undefined,
+    siteLayout: Array.isArray(data.siteLayout) ? (data.siteLayout as Project["siteLayout"]) : undefined,
   };
 }
 
@@ -334,8 +357,13 @@ export type ProjectUpdateInput = Partial<
     | "deleted"
     | "deletedAt"
     | "deletedBy"
+    | "siteSOP"
+    | "siteLayout"
   >
->;
+> & {
+  siteSOP?: Project["siteSOP"] | null;
+  siteLayout?: Project["siteLayout"] | null;
+};
 
 /** @deprecated Use buildFirestoreProjectDocument */
 export function buildFirestoreProjectFields(

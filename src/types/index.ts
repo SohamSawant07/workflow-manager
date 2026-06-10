@@ -42,6 +42,21 @@ export interface Project {
     name: string;
     phone: string;
   }[];
+  siteSOP?: {
+    type: "file" | "link";
+    url: string;
+    fileName?: string;
+    uploadedAt: string;
+    uploadedBy: string;
+  };
+  siteLayout?: Array<{
+    type: "file" | "link";
+    fileType?: "pdf" | "image";
+    url: string;
+    fileName?: string;
+    uploadedAt: string;
+    uploadedBy: string;
+  }>;
   deleted?: boolean;
   deletedAt?: string;
   deletedBy?: string;
