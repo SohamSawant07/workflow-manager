@@ -42,16 +42,17 @@ export interface Project {
     name: string;
     phone: string;
   }[];
-  siteSOP?: {
+  siteSOP?: Array<{
     type: "file" | "link";
+    fileType?: "pdf" | "image" | "excel";
     url: string;
     fileName?: string;
     uploadedAt: string;
     uploadedBy: string;
-  };
+  }>;
   siteLayout?: Array<{
     type: "file" | "link";
-    fileType?: "pdf" | "image";
+    fileType?: "pdf" | "image" | "excel";
     url: string;
     fileName?: string;
     uploadedAt: string;

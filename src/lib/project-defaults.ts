@@ -51,16 +51,17 @@ export interface ProjectFirestoreDocument {
   deleted?: boolean;
   deletedAt?: string | null;
   deletedBy?: string | null;
-  siteSOP?: {
+  siteSOP?: Array<{
     type: "file" | "link";
+    fileType?: "pdf" | "image" | "excel";
     url: string;
     fileName?: string;
     uploadedAt: string;
     uploadedBy: string;
-  } | null;
+  }> | null;
   siteLayout?: Array<{
     type: "file" | "link";
-    fileType?: "pdf" | "image";
+    fileType?: "pdf" | "image" | "excel";
     url: string;
     fileName?: string;
     uploadedAt: string;
@@ -331,7 +332,11 @@ export function normalizeProjectFromFirestore(
     deleted: !!data.deleted,
     deletedAt: data.deletedAt ? toIso(data.deletedAt, "") : undefined,
     deletedBy: data.deletedBy ? String(data.deletedBy) : undefined,
-    siteSOP: data.siteSOP ? (data.siteSOP as Project["siteSOP"]) : undefined,
+    siteSOP: data.siteSOP
+      ? (Array.isArray(data.siteSOP)
+          ? (data.siteSOP as Project["siteSOP"])
+          : [data.siteSOP as NonNullable<Project["siteSOP"]>[number]])
+      : undefined,
     siteLayout: Array.isArray(data.siteLayout) ? (data.siteLayout as Project["siteLayout"]) : undefined,
   };
 }

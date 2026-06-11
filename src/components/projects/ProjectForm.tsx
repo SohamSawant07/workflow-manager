@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { useAuthContext } from "@/components/providers/AuthProvider";
-import { createProject } from "@/lib/firestore/projects";
+import { createProject, updateProject } from "@/lib/firestore/projects";
 import { toProjectCreator } from "@/lib/auth/user";
 import { PROJECT_STATUSES } from "@/lib/constants";
 import type { ProjectStatus } from "@/types";
+import { DocumentBox, type DocItem } from "@/components/projects/ProjectDocuments";
 
 export function ProjectForm() {
 
@@ -29,10 +30,13 @@ export function ProjectForm() {
   const [googleMapsLink, setGoogleMapsLink] = useState("");
   const [startDate, setStartDate] = useState("");
   const [clientPhone, setClientPhone] = useState("");
+  const [sopItems, setSopItems] = useState<DocItem[]>([]);
+  const [layoutItems, setLayoutItems] = useState<DocItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const { user } = useAuthContext();
   const router = useRouter();
+  const uploadedBy = user?.displayName ?? user?.email ?? "Unknown";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,6 +86,15 @@ export function ProjectForm() {
         },
         toProjectCreator(user)
       );
+
+      // Save SOP / Layout docs if any were uploaded during the form
+      const docUpdates: Record<string, unknown> = {};
+      if (sopItems.length) docUpdates.siteSOP = sopItems;
+      if (layoutItems.length) docUpdates.siteLayout = layoutItems;
+      if (Object.keys(docUpdates).length) {
+        await updateProject(id, docUpdates as Parameters<typeof updateProject>[1]);
+      }
+
       router.push(`/projects/${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create project");
@@ -285,6 +298,32 @@ export function ProjectForm() {
             </svg>
             Add Contact
           </Button>
+        </div>
+      </div>
+
+      <hr className="border-zinc-200 dark:border-zinc-800" />
+
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          Site Documents <span className="text-xs font-normal text-zinc-400">(optional)</span>
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <DocumentBox
+            title="Site SOP"
+            subtitle="PDF, images, or Excel · up to 10 files"
+            items={sopItems}
+            canEdit={true}
+            uploadedBy={uploadedBy}
+            onSave={async (items) => setSopItems(items)}
+          />
+          <DocumentBox
+            title="Site Layout"
+            subtitle="PDF, images, or Excel · up to 10 files"
+            items={layoutItems}
+            canEdit={true}
+            uploadedBy={uploadedBy}
+            onSave={async (items) => setLayoutItems(items)}
+          />
         </div>
       </div>
 
